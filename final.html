@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<!-- saved from url=(0029)http://dyl.anjon.es/onradio/1 -->
+<html lang="en-gb" class=" js no-touch svg inlinesvg svgclippaths no-ie8compat"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta charset="utf-8">
+	<title>Dylan Jones :: On Radio :: BBC Radio 1</title>
+	<meta name="description" content="Now playing on BBC Radio 1 - track listings and artist information in real-time. You can scrobble to LastFM as well.">
+	<meta name="viewport" content="width=device-width,initial-scale=1.0">
+	
+	<link rel="canonical" href="final project1_files">
+	<link rel="stylesheet" href="./final project1_files/style.css" type="text/css">
+	
+	
+	
+	
+	<script type="text/javascript" async src="./final project1_files/ga.js"></script><script type="text/javascript" src="./final project1_files/script.js"></script>
+	<style>html{background-color:#191919}.stations{margin-bottom:15px;margin-left:15px;}.stations a {margin:0 10px 0 0;}</style>
+	
+	<script type="text/javascript" src="./final project1_files.js"></script>
+	<script type="text/javascript">
+	var id = 15;
+	var last = "Thinkin Bout You";
+	var progress = 1;
+	var session;
+	var b = 1617;
+	var a = 7200;
+	$(document).ready(function() {
+		var textlastid = 0;
+		function updateTracks() {
+			$.ajax({
+				type     : 'GET',
+				dataType : 'jsonp',
+				url      : 'https://ws.audioscrobbler.com/2.0/',
+				data     : 'method=user.getrecenttracks&user=bbcradio1&api_key=ea5099237517b2b08252aed02e06a3ea&format=json&limit=5',
+				success  : 
+					function(reply) {
+						if(typeof(reply.recenttracks) != 'undefined') {
+							var track = reply.recenttracks.track[0];
+							last = last.toString();
+							var test = track.name.toString();
+							if(test!=last) {
+								var str = '<tr id="track-'+id+'" style="display:none;">';
+								if(track.artist.mbid!='') {
+									str = str+'<td><img src="https://www.bbc.co.uk/music/images/artists/542x305/'+track.artist.mbid+'.jpg" style="height:50px;"></td>';
+									str = str+'<td><p><a href="/music/artist/'+track.artist.mbid+'" id="'+track.artist.mbid+'" target="_blank" title="Artist Information" class="artist">'+track.artist['#text']+'</a> - '+track.name+'</p><p><span class="label">'+timestamp(track.date['uts'])+'</span></p></td></tr>';
+								}
+								else {
+									str = str+'<td><img src="/images/no-artist.jpg" style="height:50px;"></td>';
+									str = str+'<td><p><a href="/music/artist/'+track.artist['#text']+'" target="_blank" title="Artist Information">'+track.artist['#text']+'</a> - '+track.name+'</p><p><span class="label">'+timestamp(track.date['uts'])+'</span></p></td></tr>';
+								}
+								$('#tracks').prepend(str);
+								$('#track-'+id).fadeIn(1000);
+								if(track.artist.mbid!='')
+									$('#'+track.artist.mbid).click();
+								last = test;
+								id++;
+
+							}
+						}
+					}
+			});
+		}
+		var refreshTracks = setInterval(function() {
+			updateTracks();
+		}, 20000);
+		function updateShow() {
+			$.ajax({
+				type     : 'GET',
+				dataType : 'jsonp',
+				url      : '/onradio/1.json',
+				success  : 
+					function(reply) {
+						$('#show-info').html('<a href="http://www.bbc.co.uk/programmes/'+reply.programme.pid+'">'+reply.programme.title+'</a>: '+reply.programme.medium_synopsis);
+						$('#show-image').attr('src','https://www.bbc.co.uk/iplayer/images/episode/'+reply.programme.pid+'_640_360.jpg');
+						$('#show-title').html(reply.programme.display_title.title);
+						$('#show-title').attr('href','http://www.bbc.co.uk/programmes/'+reply.programme.parent.programme.pid);
+						a = reply.programme.versions[0].duration;
+						b = reply.programme.versions[0].duration;
+						progress = 1;
+						var refreshShow = setTimeout(function() {
+							updateShow();
+						}, reply.programme.versions[0].duration*1000);
+					}
+			});
+		}
+		var refreshShow = setTimeout(function() {
+			updateShow();
+		}, 1622000);
+		function updateProgress() {
+			progress++;
+			var width = ((a-b+progress)/a)*100;
+			$('#done').css('width',width+'%');
+			$('#done').attr('title',width+'%');
+		}
+		var refreshProgress = setInterval(function() {
+			updateProgress();
+		}, 1000);
+		$('.listen').live('click',function(e) {
+			e.preventDefault();
+			$('.listen').remove();
+			var emp = new embeddedMedia.Player();
+			emp.setWidth(273);
+			emp.setHeight(155);
+			emp.setDomId('emp');
+			emp.set('config_settings_autoPlay','true');
+			emp.set('config_settings_skin','black');
+			emp.setPlaylist('https://www.bbc.co.uk/iplayer/widget/serviceplaylist/service/bbc_radio_one');
+			emp.write();
+			return false;
+		});
+		$('.artist').live('click',function(e) {
+			e.preventDefault();
+			var target_offset = $('#information').offset();
+        	var target_top = target_offset.top;
+        	$('html, body').animate({scrollTop:target_top}, 500);
+			var name = $(this).html();
+			var mbzid = $(this).attr('id');
+			$('#information').html('');
+			$('#information').append('<article class="media"><img src="https://www.bbc.co.uk/music/images/artists/542x305/'+mbzid+'.jpg" title="'+name+'" style="width:528.5px;" alt="Artist Image"></article><section><h3>'+name+'</h3></section>');
+			$('#information').append('<section id="loading">Loading Artist Data...</section>');
+			$.ajax({
+				type     : 'GET',
+				dataType : 'json',
+				url      : '/music/artist/'+mbzid+'.json',
+				success  : 
+					function(reply) { 
+						$('#loading').fadeOut(200);
+						if(typeof(reply[0].wikipedia_article) != 'undefined')
+							$('#information').append('<section><h5>Biography</h5><p id="biography">'+reply[0].wikipedia_article.content+'</p></section>');
+						if(typeof(reply[0]['7digital']) != 'undefined') {
+							if(typeof(reply[0]['7digital'].releases.release) != 'undefined') {
+								$('#information').append('<section><h5>Releases</h5><table id="releases"></table><img src="/images/7digital.png" alt="7 Digital" style="height:14px;"></section>');
+								for(var a in reply[0]['7digital'].releases.release) {
+									var release = reply[0]['7digital'].releases.release[a];
+									$('#releases').append('<tr><td><img src="'+release.image+'" alt="Artwork"></td><td><a href="'+release.url+'" target="_blank">'+release.title+'</a></td><td><a href="'+release.url+'" target="blank" title="Buy Now" class="button">Buy</a></td></tr>');
+								}
+							}
+						}
+						if(typeof(reply[0].reviews[0]) != 'undefined') {
+							$('#information').append('<section><h5>Reviews</h5><table id="reviews"></table></section>');
+							for(var a in reply[0].reviews) {
+								var review = reply[0].reviews[a];
+								$('#reviews').append('<tr><td><img src="'+review.release.artwork.small+'" alt="Artwork"></td><td><a href="http://www.bbc.co.uk/music/reviews/'+review.url_key+'" target="_blank">'+review.release.title+'</a></td><td>'+review.short_synopsis+'<br>By '+review.reviewer+'</td></tr>');
+							}
+						}
+						if(typeof(reply[0].news[0]) != 'undefined') {
+							$('#information').append('<section><h5>News</h5><table id="news"></table></section>');
+							for(var a in reply[0].news) {
+								var news = reply[0].news[a];
+								$('#news').append('<tr><td><a href="'+news.url+'" target="_blank">'+news.title+'</a></td><td>'+news.description+'</td></tr>');
+							}
+						}
+						if(typeof(reply[0].songkick.resultsPage.results.event) != 'undefined') {
+							$('#information').append('<section><h5>Events</h5><ul id="events"></ul></section>');
+							for(var a in reply[0].songkick.resultsPage.results.event) {
+								var event = reply[0].songkick.resultsPage.results.event[a];
+								$('#events').append('<li><a href="'+event.uri+'" target="_blank">'+event.displayName+'</a></li>');
+							}
+						}
+						if(typeof(reply[0].links[0]) != 'undefined') {
+							$('#information').append('<section><h5>Links</h5><ul id="links"></ul></section>');
+							for(var a in reply[0].links) {
+								var link = reply[0].links[a];
+								$('#links').append('<li><a href="'+link.url+'" target="_blank">'+link.name+'</a></li>');
+							}
+						}
+					},
+				error   :
+					function() {
+						$.ajax({
+							type     : 'GET',
+							dataType : 'json',
+							url      : 'https://ws.audioscrobbler.com/2.0/',
+							data     : 'method=artist.getinfo&mbid='+mbzid+'&api_key=ea5099237517b2b08252aed02e06a3ea&format=json',
+							success  : 
+								function(reply) { 
+									$('#loading').fadeOut(200);
+									if(typeof(reply.artist.bio)!='undefined')
+										$('#information').append('<section><h5>Biography</h5><p id="biography">'+reply.artist.bio.content+'</p></section>');
+								}
+						});
+					}
+			});
+			return false;
+		});
+		$('#scrobble').click(function() { window.location = '/onradio/1/scrobble'; });
+		$('#facebook').click(function() { window.location = '/onradio/1/facebook'; });
+	});
+	</script>
+</head>
+<body>
+	<ul id="top" class="nav-bar">
+<li><a href="http://www.facebook.com/li.jieyi.1" accesskey="1" title="Home">Jason Li's facebook</a></li>
+		<li><a href="http://ischool.berkeley.edu/~i153-026/i153/a2/resume-online" title="Who?">About Me</a></li>
+		
+		<li><a href="http://www.weibo.com/1894005047/profile?topnav=1&wvr=3.6" title="My Blog">Blog</a></li>
+		
+	</ul>
+	<h1>FINAL PROJECT:Now Playing on BBC Radio </h1>
+	<nav class="stations">
+		<a href="http://www.bbc.co.uk/radio/player/bbc_radio_one" target="_blank"title="BBC Radio 1"><img src="./final project1_files/radio1.png" alt="Radio 1"></a>
+		<a href="http://www.bbc.co.uk/radio/player/bbc_1xtra" target="_blank"title="BBC 1Xtra"><img src="./final project1_files/1xtra.png" alt="1Xtra"></a>
+		<a href="http://www.bbc.co.uk/radio/player/bbc_radio_two" target="_blank"title="BBC Radio 2"><img src="./final project1_files/radio2.png" alt="Radio 2"></a>
+		<a href="http://www.bbc.co.uk/radio/player/bbc_radio_five_live_sports_extra" target="_blank"title="BBC 6 Music"><img src="./final project1_files/6music.png" alt="6 Music"></a>
+	</nav>
+	<section class="row">
+		<section class="span8">
+			<div id="emp" class="player" style="width:273px;height:154px;&#39;"><img id="show-image" class="listen" src="./final project1_files/b01ld1wm_640_360.jpg" style="width:273px;height:153px;cursor:pointer;" alt="Show Image"></div>
+			<h3><a id="show-title" href="https://www.bbc.co.uk/programmes/b00f3lmy" target="_blank">Nick Grimshaw</a></h3>
+			<div style="width:100%;height:5px;background:#DBDBDB;margin-bottom:10px;"><div id="done" style="height: 100%; background-color: rgb(25, 25, 25); width: 79.81944444444444%; background-position: initial initial; background-repeat: initial initial; " title="79.81944444444444%"></div></div>
+			<p id="show-info"><a href="https://www.bbc.co.uk/programmes/b01ld1wm" target="_blank">09/08/2012</a>: Late night new music and lols.</p>
+			<div id="text-holder"></div>
+			
+			<h4>Recently Played</h4>
+			<table id="tracks">
+			<tbody><tr id="track-15" style=""><td><img src="./final project1_files/no-artist.jpg" style="height:50px;"></td><td><p><a href="http://dyl.anjon.es/music/artist/Karma%20Kid" target="_blank" title="Artist Information">Karma Kid</a> - It's Always</p><p><span class="label"><time title="" datetime="" data-timestamp="1344551627">2 minutes ago</time></span></p></td></tr><tr id="track-0">
+				<td><img src="./final project1_files/e520459c-dff4-491d-a6e4-c97be35e0044.jpg" style="height:55px;" alt="Artist Image"></td>
+				<td><p><a href="http://dyl.anjon.es/music/artist/e520459c-dff4-491d-a6e4-c97be35e0044" id="e520459c-dff4-491d-a6e4-c97be35e0044" target="_blank" title="Artist Information" class="artist">Frank Ocean</a> - Thinkin Bout You</p><span class="label"><time title="11:30pm Thursday, 9th August 2012 BST" datetime="2012-08-09T23:30:13+01:00" data-timestamp="1344551413">5 minutes ago</time></span></td>
+			</tr>
+			<tr id="track-1">
+				<td><img src="./final project1_files/7182bcb5-0d37-4492-8452-464febd77844.jpg" style="height:55px;" alt="Artist Image"></td>
+				<td><p><a href="http://dyl.anjon.es/music/artist/7182bcb5-0d37-4492-8452-464febd77844" id="7182bcb5-0d37-4492-8452-464febd77844" target="_blank" title="Artist Information" class="artist">Bondax</a> - Baby I Got That</p><span class="label"><time title="11:25pm Thursday, 9th August 2012 BST" datetime="2012-08-09T23:25:24+01:00" data-timestamp="1344551124">10 minutes ago</time></span></td>
+			</tr>
+			<tr id="track-2">
+				<td><img src="./final project1_files/adcc57a0-2242-4b69-80e8-a51687ea3d2d.jpg" style="height:55px;" alt="Artist Image"></td>
+				<td><p><a href="http://dyl.anjon.es/music/artist/adcc57a0-2242-4b69-80e8-a51687ea3d2d" id="adcc57a0-2242-4b69-80e8-a51687ea3d2d" target="_blank" title="Artist Information" class="artist">Machines Don't Care</a> - Beat Dun Drop (Madhava Remix)</p><span class="label"><time title="11:21pm Thursday, 9th August 2012 BST" datetime="2012-08-09T23:21:14+01:00" data-timestamp="1344550874">14 minutes ago</time></span></td>
+			</tr>
+			<tr id="track-3">
+				<td><img src="./final project1_files/c3587b2a-6287-4345-9e0e-cf0252bc192a.jpg" style="height:55px;" alt="Artist Image"></td>
+				<td><p><a href="http://dyl.anjon.es/music/artist/c3587b2a-6287-4345-9e0e-cf0252bc192a" id="c3587b2a-6287-4345-9e0e-cf0252bc192a" target="_blank" title="Artist Information" class="artist">Clannad</a> - Theme From Harry's Game</p><span class="label"><time title="11:15pm Thursday, 9th August 2012 BST" datetime="2012-08-09T23:15:21+01:00" data-timestamp="1344550521">20 minutes ago</time></span></td>
+			</tr>
+			<tr id="track-4">
+				<td><img src="./final project1_files/no-artist.jpg" style="height:55px;" alt="No Artist Image"></td>
+				<td><p><a href="http://dyl.anjon.es/music/artist/Baauer" target="_blank" title="Artist Information">Baauer</a> - Harlem Shake</p><span class="label"><time title="11:11pm Thursday, 9th August 2012 BST" datetime="2012-08-09T23:11:18+01:00" data-timestamp="1344550278">24 minutes ago</time></span></td>
+			</tr>
+			<tr id="track-5">
+				<td><img src="./final project1_files/1b1e2073-f815-46c9-8ddf-9ea3767bd6b2.jpg" style="height:55px;" alt="Artist Image"></td>
+				<td><p><a href="http://dyl.anjon.es/music/artist/1b1e2073-f815-46c9-8ddf-9ea3767bd6b2" id="1b1e2073-f815-46c9-8ddf-9ea3767bd6b2" target="_blank" title="Artist Information" class="artist">Compound One</a> - Howz Tingz</p><span class="label"><time title="11:07pm Thursday, 9th August 2012 BST" datetime="2012-08-09T23:07:36+01:00" data-timestamp="1344550056">28 minutes ago</time></span></td>
+			</tr>
+			<tr id="track-6">
+				<td><img src="./final project1_files/366a6b5c-def5-4ba7-bc3f-5745af547b49.jpg" style="height:55px;" alt="Artist Image"></td>
+				<td><p><a href="http://dyl.anjon.es/music/artist/366a6b5c-def5-4ba7-bc3f-5745af547b49" id="366a6b5c-def5-4ba7-bc3f-5745af547b49" target="_blank" title="Artist Information" class="artist">Melé</a> - Beamer (feat. Kano)</p><span class="label"><time title="11:03pm Thursday, 9th August 2012 BST" datetime="2012-08-09T23:03:51+01:00" data-timestamp="1344549831">31 minutes ago</time></span></td>
+			</tr>
+			<tr id="track-7">
+				<td><img src="./final project1_files/no-artist.jpg" style="height:55px;" alt="No Artist Image"></td>
+				<td><p><a href="http://dyl.anjon.es/music/artist/Baauer" target="_blank" title="Artist Information">Baauer</a> - Harlem Shake</p><span class="label"><time title="11:00pm Thursday, 9th August 2012 BST" datetime="2012-08-09T23:00:37+01:00" data-timestamp="1344549637">35 minutes ago</time></span></td>
+			</tr>
+			<tr id="track-8">
+				<td><img src="./final project1_files/d3ba1c50-d403-40df-8eac-80d74551a7e3.jpg" style="height:55px;" alt="Artist Image"></td>
+				<td><p><a href="http://dyl.anjon.es/music/artist/d3ba1c50-d403-40df-8eac-80d74551a7e3" id="d3ba1c50-d403-40df-8eac-80d74551a7e3" target="_blank" title="Artist Information" class="artist">Benga</a> - Pour Your Love</p><span class="label"><time title="10:54pm Thursday, 9th August 2012 BST" datetime="2012-08-09T22:54:37+01:00" data-timestamp="1344549277">41 minutes ago</time></span></td>
+			</tr>
+			<tr id="track-9">
+				<td><img src="./final project1_files/0fb7491a-d403-4da6-85e2-9b90cb36270b.jpg" style="height:55px;" alt="Artist Image"></td>
+				<td><p><a href="http://dyl.anjon.es/music/artist/0fb7491a-d403-4da6-85e2-9b90cb36270b" id="0fb7491a-d403-4da6-85e2-9b90cb36270b" target="_blank" title="Artist Information" class="artist">Jessie Ware</a> - Sweet Talk</p><span class="label"><time title="10:49pm Thursday, 9th August 2012 BST" datetime="2012-08-09T22:49:43+01:00" data-timestamp="1344548983">46 minutes ago</time></span></td>
+			</tr>
+			<tr id="track-10">
+				<td><img src="./final project1_files/5e647c13-e1bd-43d5-a4b8-4f0bd6c8551c.jpg" style="height:55px;" alt="Artist Image"></td>
+				<td><p><a href="http://dyl.anjon.es/music/artist/5e647c13-e1bd-43d5-a4b8-4f0bd6c8551c" id="5e647c13-e1bd-43d5-a4b8-4f0bd6c8551c" target="_blank" title="Artist Information" class="artist">Dog Is Dead</a> - Talk Through The Night</p><span class="label"><time title="10:44pm Thursday, 9th August 2012 BST" datetime="2012-08-09T22:44:15+01:00" data-timestamp="1344548655">51 minutes ago</time></span></td>
+			</tr>
+			<tr id="track-11">
+				<td><img src="./final project1_files/4ef79472-c86c-4895-a96f-4cb340d16143.jpg" style="height:55px;" alt="Artist Image"></td>
+				<td><p><a href="http://dyl.anjon.es/music/artist/4ef79472-c86c-4895-a96f-4cb340d16143" id="4ef79472-c86c-4895-a96f-4cb340d16143" target="_blank" title="Artist Information" class="artist">The Cast Of Cheers</a> - Human Elevator</p><span class="label"><time title="10:39pm Thursday, 9th August 2012 BST" datetime="2012-08-09T22:39:47+01:00" data-timestamp="1344548387">56 minutes ago</time></span></td>
+			</tr>
+			<tr id="track-12">
+				<td><img src="./final project1_files/0c3505e7-d884-43cf-9028-d318607190a4.jpg" style="height:55px;" alt="Artist Image"></td>
+				<td><p><a href="http://dyl.anjon.es/music/artist/0c3505e7-d884-43cf-9028-d318607190a4" id="0c3505e7-d884-43cf-9028-d318607190a4" target="_blank" title="Artist Information" class="artist">Azealia Banks</a> - Esta Noche</p><span class="label"><time title="10:36pm Thursday, 9th August 2012 BST" datetime="2012-08-09T22:36:26+01:00" data-timestamp="1344548186">59 minutes ago</time></span></td>
+			</tr>
+			<tr id="track-13">
+				<td><img src="./final project1_files/no-artist.jpg" style="height:55px;" alt="No Artist Image"></td>
+				<td><p><a href="http://dyl.anjon.es/music/artist/TNGHT" target="_blank" title="Artist Information">TNGHT</a> - Higher Ground</p><span class="label"><time title="10:30pm Thursday, 9th August 2012 BST" datetime="2012-08-09T22:30:41+01:00" data-timestamp="1344547841">1 hour ago</time></span></td>
+			</tr>
+		</tbody></table>
+	</section>
+	<div id="information" class="span8 text-right"></div>
+	</section>
+	<section id="credits">
+		Programme information here is provided by the BBC and supported by <a href="http://backstage.bbc.co.uk/" title="BBC Backstage">backstage.bbc.co.uk</a>. Track information is provided by <a href="http://last.fm/">LastFM</a>,
+		event information is provided by <a href="http://songkick.com/" title="Website">Songkick</a>, biographical information comes from <a href="http://wikipedia.org/" title="Wikipedia">Wikipedia</a> and is licenced by
+		<a href="http://en.wikipedia.org/wiki/Wikipedia:Text_of_Creative_Commons_Attribution-ShareAlike_3.0_Unported_License" title="Creative Commons Attribution-Sharealike 3.0 Unported License">CC-BY-SA</a>.
+		
+	</section>
+	<script type="text/javascript">
+	var _gaq = _gaq || [];
+	_gaq.push(['_setAccount', 'UA-29559837-1']);
+	_gaq.push(['_trackPageview']);
+	(function() {
+	var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true; ga.src = 'https://www.google-analytics.com/ga.js';
+	var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+	})();
+	</script>
+
+</body></html>
